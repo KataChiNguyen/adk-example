@@ -2,7 +2,7 @@
 
 ## System Overview
 
-Thiết kế architecture cho chatbot Confluence với khả năng tìm kiếm thông minh và trả lời tự nhiên sử dụng Google Agent Development Kit làm core engine.
+Architecture design for an intelligent Confluence chatbot with smart search capabilities and natural language responses, using Google Agent Development Kit as the core engine.
 
 ## High-Level Architecture
 
@@ -116,7 +116,7 @@ class VertexMatchingEngine:
         self.client = aiplatform.MatchServiceClient()
         
     def create_index(self):
-        """Tạo vector index cho Confluence content"""
+        """Create vector index for Confluence content"""
         index_config = {
             "display_name": "confluence-content-index",
             "description": "Vector index for Confluence pages and attachments",
@@ -131,7 +131,7 @@ class VertexMatchingEngine:
         return self.client.create_index(parent=self.parent, index=index_config)
     
     def search_similar_content(self, query_embedding: List[float], num_neighbors: int = 10):
-        """Tìm kiếm content tương tự dựa trên vector"""
+        """Search for similar content based on vector embeddings"""
         queries = [{
             "datapoint": {
                 "datapoint_id": "query",
@@ -156,7 +156,7 @@ class ContentProcessor:
         self.embedding_model = embedding_model
         
     def process_confluence_page(self, page_data: dict) -> dict:
-        """Xử lý và tạo embeddings cho Confluence page"""
+        """Process and create embeddings for Confluence page"""
         
         # Extract and clean content
         content = self.extract_content(page_data)
@@ -181,7 +181,7 @@ class ContentProcessor:
         return embeddings
     
     def chunk_content(self, content: str, chunk_size: int = 500) -> List[str]:
-        """Chia content thành chunks nhỏ để embedding hiệu quả"""
+        """Split content into smaller chunks for effective embedding"""
         sentences = content.split('. ')
         chunks = []
         current_chunk = ""
@@ -208,9 +208,9 @@ class PerplexityIntegration:
         self.base_url = "https://api.perplexity.ai"
         
     def deep_search_analysis(self, query: str, confluence_results: List[dict]) -> dict:
-        """Sử dụng Perplexity để phân tích sâu và tổng hợp thông tin"""
+        """Use Perplexity for deep analysis and information synthesis"""
         
-        # Chuẩn bị context từ Confluence results
+        # Prepare context from Confluence results
         context = self.prepare_context(confluence_results)
         
         prompt = f"""
@@ -258,9 +258,9 @@ class ContentSyncService:
         self.scheduler = scheduler
         
     def setup_realtime_sync(self):
-        """Thiết lập đồng bộ real-time với Confluence"""
+        """Setup real-time synchronization with Confluence"""
         
-        # Webhook để nhận thông báo khi content thay đổi
+        # Webhook to receive notifications when content changes
         @self.scheduler.scheduled_job('interval', minutes=15)
         def sync_recent_changes():
             recent_changes = self.confluence.get_recent_changes()
@@ -268,13 +268,13 @@ class ContentSyncService:
                 self.process_content_change(change)
     
     def process_content_change(self, change: dict):
-        """Xử lý thay đổi content"""
+        """Process content changes"""
         page_id = change["content"]["id"]
         
         if change["operation"] == "delete":
             self.vector_engine.delete_embeddings(page_id)
         else:
-            # Update hoặc create
+            # Update or create
             page_data = self.confluence.get_page_content(page_id)
             embeddings = ContentProcessor().process_confluence_page(page_data)
             self.vector_engine.upsert_embeddings(embeddings)
@@ -289,12 +289,12 @@ class ResponseGenerator:
         self.perplexity = perplexity_client
         
     def generate_response(self, user_query: str) -> dict:
-        """Tạo response thông qua ADK pipeline"""
+        """Generate response through ADK pipeline"""
         
-        # Step 1: ADK xử lý query và routing tools
+        # Step 1: ADK processes query and routes tools
         adk_response = self.adk.process_query(user_query)
         
-        # Step 2: Nếu cần deep analysis, gọi Perplexity
+        # Step 2: If deep analysis is needed, call Perplexity
         if self.needs_deep_analysis(adk_response):
             enhanced_response = self.perplexity.deep_search_analysis(
                 user_query, 
@@ -306,7 +306,7 @@ class ResponseGenerator:
         return self.format_final_response(adk_response)
     
     def needs_deep_analysis(self, response: dict) -> bool:
-        """Xác định khi nào cần phân tích sâu với Perplexity"""
+        """Determine when deep analysis with Perplexity is needed"""
         indicators = [
             "complex analysis",
             "trend analysis", 
@@ -363,7 +363,7 @@ class SecurityLayer:
         }
     
     def authenticate_request(self, request):
-        """Xác thực request và check permissions"""
+        """Authenticate request and check permissions"""
         user = self.extract_user(request)
         
         # Check Confluence permissions
@@ -392,11 +392,11 @@ class CacheLayer:
         }
     
     def get_cached_search(self, query_hash: str):
-        """Lấy kết quả search từ cache"""
+        """Get search results from cache"""
         return self.redis.get(f"search:{query_hash}")
     
     def cache_search_results(self, query_hash: str, results: dict):
-        """Cache kết quả search"""
+        """Cache search results"""
         self.redis.setex(
             f"search:{query_hash}",
             self.cache_ttl["search_results"],
@@ -485,4 +485,4 @@ class KPITracker:
         }
 ```
 
-Thiết kế architecture này tận dụng tối đa Google ADK làm orchestration layer, tích hợp seamlessly với Vertex Matching Engine cho semantic search và Perplexity AI cho deep analysis, tạo ra một chatbot Confluence thông minh và có khả năng mở rộng cao.
+This architecture design maximizes the use of Google ADK as an orchestration layer, seamlessly integrating with Vertex Matching Engine for semantic search and Perplexity AI for deep analysis, creating an intelligent and highly scalable Confluence chatbot.
